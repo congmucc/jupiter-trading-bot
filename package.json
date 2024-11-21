@@ -1,0 +1,12 @@
+{
+  "name": "jupiter-trading-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@jup-ag/api": "^6.0.30",
+    "@solana/spl-token": "^0.4.9",
+    "@solana/web3.js": "^1.95.4",
+    "dotenv": "^16.4.5"
+  }
+}

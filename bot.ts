@@ -208,7 +208,65 @@ export class ArbBot {
 
     
     private async executeSwap(route: QuoteResponse): Promise<void> {
-        // TODO
+        try {
+            const {
+                computeBudgetInstructions,
+                setupInstructions,
+                swapInstruction,
+                cleanupInstruction,
+                addressLookupTableAddresses,
+            } = await this.jupiterApi.swapInstructionsPost({
+                swapRequest: {
+                    quoteResponse: route,
+                    userPublicKey: this.wallet.publicKey.toBase58(),
+                    prioritizationFeeLamports: 'auto'
+                },
+            });
+
+            const instructions: TransactionInstruction[] = [
+                ...computeBudgetInstructions.map(this.instructionDataToTransactionInstruction),
+                ...setupInstructions.map(this.instructionDataToTransactionInstruction),
+                this.instructionDataToTransactionInstruction(swapInstruction),
+                this.instructionDataToTransactionInstruction(cleanupInstruction),
+            ].filter((ix) => ix !== null) as TransactionInstruction[];
+
+            const addressLookupTableAccounts = await this.getAdressLookupTableAccounts(
+                addressLookupTableAddresses,
+                this.solanaConnection
+            );
+
+            const { blockhash, lastValidBlockHeight } = await this.solanaConnection.getLatestBlockhash();
+
+            const messageV0 = new TransactionMessage({
+                payerKey: this.wallet.publicKey,
+                recentBlockhash: blockhash,
+                instructions,
+            }).compileToV0Message(addressLookupTableAccounts);
+
+            const transaction = new VersionedTransaction(messageV0);
+            transaction.sign([this.wallet]);
+
+            const rawTransaction = transaction.serialize();
+            const txid = await this.solanaConnection.sendRawTransaction(rawTransaction, {
+                skipPreflight: true,
+                maxRetries: 2
+            });
+            const confirmation = await this.confirmTransaction(this.solanaConnection, txid);
+            if (confirmation.err) {
+                throw new Error('Transaction failed');
+            }            
+            await this.postTransactionProcessing(route, txid);
+        } catch (error) {
+            if (error instanceof ResponseError) {
+                console.log(await error.response.json());
+            }
+            else {
+                console.error(error);
+            }
+            throw new Error('Unable to execute swap');
+        } finally {
+            this.waitingForConfirmation = false;
+        }
     }
 
     private async updateNextTrade(lastTrade: QuoteResponse): Promise<void> {

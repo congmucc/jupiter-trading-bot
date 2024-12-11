@@ -16,6 +16,7 @@ yarn install
 
 ts-node app.ts
 ```
+> You must have a solana wallet in 
 
 ## Result
 ```

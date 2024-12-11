@@ -270,7 +270,13 @@ export class ArbBot {
     }
 
     private async updateNextTrade(lastTrade: QuoteResponse): Promise<void> {
-        // TODO
+        const priceChange = this.targetGainPercentage / 100;
+        this.nextTrade = {
+            inputMint: this.nextTrade.outputMint,
+            outputMint: this.nextTrade.inputMint,
+            amount: parseInt(lastTrade.outAmount),
+            nextTradeThreshold: parseInt(lastTrade.inAmount) * (1 + priceChange),
+        };
     }
 
     private async logSwap(args: LogSwapArgs): Promise<void> {
@@ -357,6 +363,4 @@ export class ArbBot {
         await this.refreshBalances();
         await this.logSwap({ inputToken: inputMint, inAmount, outputToken: outputMint, outAmount, txId: txid, timestamp: new Date().toISOString() });
     }
-
-    
 }
